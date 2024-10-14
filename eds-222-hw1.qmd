@@ -26,11 +26,14 @@ In answering the following questions, please consider the lecture content from c
 
 ### Question 1
 
+
+
 ```{r}
 # Read in libraries
 library(tidyverse)
 library(here)
 library(dplyr)
+library(evaluate)
 ```
 
 
@@ -50,14 +53,18 @@ govt <- readRDS(here::here("data", "airpol-PK-govt.RDS"))
 There's an implicit assumption about file organization in the code above. What is it? How can you make the code work?
 :::
 
-It makes an assumption of where the data is, and that we will have the files saved the same way on our computers. I use the here::here function to make the code work.
+  It makes an assumption of where the data is, and that we will have the files saved the same way on our     computers. I use the here::here function to make the code work.
 
 1.  These dataframes have one row per pollution observation. How many pollution records are in each dataset?
+
+
 ```{r}
 # Check for the numbers of rows per pollution observation
 dim(crowdsourced)
 dim(govt)
+
 ```
+
     There are 5488 observations in the crowdsourced data set, and 1960 in the govt dataset
 
 2.  Each monitor is located at a unique latitude and longitude location. How many unique monitors are in each dataset?
@@ -101,7 +108,7 @@ The goal of pollution monitoring in Lahore is to measure the average pollution c
 
 1.  What is the *population* in this setting? Please be precise.
     
-    The population is air quality in Lahore, Pakistan.
+    The population is pollution in Lahore, Pakistan.
 
 2.  What are the *samples* in this setting? Please be precise.
 
@@ -116,10 +123,12 @@ The goal of pollution monitoring in Lahore is to measure the average pollution c
 1.  For both the government data and the crowd-sourced data, report the sample mean, sample minimum, and sample maximum value of PM 2.5 (measured in $\mu g/m^3$).
 
 ```{r}
+# Look at mean, min, and max of crowdsourced
 mean(crowdsourced$PM)
 min (crowdsourced$PM)
 max (crowdsourced$PM)
 
+# Look at mean, min, and max of govt. 
 mean(govt$PM)
 min(govt$PM)
 max(govt$PM)
@@ -159,35 +168,20 @@ Given the recent corruption in air quality reporting, the Prime Minister of Paki
 
 NASA's satellite data indicates that the average PM across Lahore is 89.2 $\mu g/m^3$. Since this is the most objective estimate of population-level PM 2.5 available, your goal is to match this mean as closely as possible by creating a new ground-level monitoring sample that draws on both the government and crowd-sourced samples.
 
-```{r}
-pooled_df <- bind_rows(govt, crowdsourced)
-```
-
-
-```{r}
-# round
-round_pooled <- pooled_df %>%
-  mutate(lat_round = round(latitude, digits = 2))
-strata_pooled <- round_pooled %>%
-  slice_sample(n = 200, replace = FALSE, by = lat_round)
-ggplot(strata_pooled) +
-  geom_bar(aes(x = lat_round))
-pooled_df <- bind_rows(crowdsourced, govt)
-pooled_df <- bind_rows(crowdsourced, govt)
-round_pooled <- pooled_df %>%
-  mutate(lat_round = round(latitude, digits = 2))
-strata_pooled <- round_pooled %>%
-  slice_sample(n = 200, replace = FALSE, by = lat_round)
-ggplot(strata_pooled) +
-  geom_bar(aes(x = lat_round))
-#like that
-```
-
-
 
 #### Question 6.1
 
 First, generate a *random sample* of size $n=1000$ air pollution records by (i) pooling observations across the government and the crowd-sourced data; and (ii) drawing observations at random from this pooled sample.
+
+```{r}
+# Pool observations by govt. and crowd-sourced data
+pooled_df <- bind_rows(crowdsourced, govt)
+
+# Create random sample if 1000 observations
+rand_sample <- pooled_df %>%
+  slice_sample(n = 1000, replace = FALSE)
+```
+
 
 ::: callout-tip
 `bind_rows()` may be helpful.
@@ -195,6 +189,27 @@ First, generate a *random sample* of size $n=1000$ air pollution records by (i) 
 
 Second, create a *stratified random sample*. Do so by (i) stratifying your pooled data-set into strata of 0.01 degrees of latitude, and (ii) randomly sampling 200 air pollution observations from each stratum.
 
+```{r}
+# Create variable that round each degree to 0.01 instead of 0.001
+round_pooled <- pooled_df %>%
+  mutate(lat_round = round(latitude, digits = 2)) 
+
+# Group sample by lat_round
+strata_pooled <- round_pooled %>%
+  slice_sample(n = 200, replace = FALSE, by = lat_round)  
+
+```
+
 #### Question 6.2
 
 Compare estimated means of PM 2.5 for each sampling strategy to the NASA estimate of 89.2 $\mu g/m^3$. Which sample seems to match the satellite data best? What would you recommend the Prime Minister do? Does your proposed sampling strategy rely more on government or on crowd-sourced data? Why might that be the case?
+
+```{r}
+# Check means for each sampling type and look at crowdsourced and govt. means
+mean(rand_sample$PM)
+mean(strata_pooled$PM)
+mean(crowdsourced$PM)
+mean(govt$PM)
+
+```
+Neither sampling method is close to the NASA estimate. I would suggest using a more random placement of the air quality monitors placed by the government if the government wants an accurate estimate of the particulate matter in the air. The crowdsourced observation data did have a closer mean to the NASA estimate than the government mean. I would propose they use more crowdsourced data that is potentially less bias. 
